@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+build/
+*.log
+.env*.local
+.DS_Store
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# 个人学习笔记：本地保留，不随作业提交
+LEARNING-NOTES.md

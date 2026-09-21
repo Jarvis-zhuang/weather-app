@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="天气">
+  <rect width="512" height="512" rx="96" fill="#0ea5e9"/>
+  <circle cx="196" cy="196" r="72" fill="#fde68a"/>
+  <path d="M300 356a72 72 0 0 0 0-144 88 88 0 0 0-166-26 76 76 0 0 0 12 150h154z" fill="#ffffff"/>
+  <path d="M168 424l-20 30h44l-24-30zm96 0l-20 30h44l-24-30zm-48 0l-20 30h44l-24-30z" fill="#bae6fd"/>
+</svg>

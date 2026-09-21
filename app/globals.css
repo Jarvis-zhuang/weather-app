@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Remove the grey flash iOS puts on tappable elements. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* Keep the layout from jumping when the search dropdown opens. */
+  overflow-y: scroll;
+  /* Respect the notch / home indicator on iOS (needs viewport-fit=cover). */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/**
+ * Crossfade played when the chart tab changes. The ECharts instance is never
+ * remounted (that would discard its transition), so this light veil is what
+ * makes the swap read as one continuous motion instead of a hard cut.
+ */
+@keyframes chart-swap-veil {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.chart-swap-veil {
+  animation: chart-swap-veil 200ms ease-out forwards;
+}
+
+/* Accessibility: no crossfade for users who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .chart-swap-veil {
+    animation: none;
+    opacity: 0;
+  }
+}
