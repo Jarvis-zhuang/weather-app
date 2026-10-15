@@ -92,7 +92,7 @@ node uitest.js
 
 | 决策 | 选择 | 理由 |
 | --- | --- | --- |
-| 框架 | Next.js App Router | 作业允许 React/Next.js；App Router 的 Server Component 可以在服务端完成首屏数据获取，避免"白屏 → 转圈 → 数据"的三段式体验 |
+| 框架 | Next.js App Router | 作业对框架不设限（Vue 也可以），这里**主动**选 Next.js：App Router 的 Server Component 可以在服务端完成首屏数据获取，避免"白屏 → 转圈 → 数据"的三段式体验 |
 | 语言 | TypeScript（strict） | 天气数据是纯外部输入，`unknown → 领域类型` 的收敛必须靠类型系统兜住 |
 | 数据源 | Open-Meteo | 免费、无 Key、无配额申请流程；同时提供 geocoding + forecast，两个接口风格一致 |
 | 服务端状态 | TanStack Query | 天气是典型的 **server state**：需要缓存、去重、重试、失效。手写 `useEffect + useState` 会重新实现一遍这些能力 |
@@ -127,7 +127,7 @@ node uitest.js
 
 1. **统一错误契约**：上游返回什么错误都不重要，前端永远只收到 `{ ok:false, error:{code,message} }`，UI 不必为每个 provider 写一套兜底文案。
 2. **可替换**：换 provider（比如和风、AccuWeather、付费套餐）只改 `lib/weather-source.ts`，UI 与 API 契约不动。
-3. **服务端缓存 / 限流的落点**：现在没有做持久化缓存，但接入点已经在服务端，加 `revalidate` 或 Redis 不需要动前端。
+3. **服务端缓存 / 限流的落点**：接入点已经在服务端，加缓存不用动前端。这里补一句实测踩到的坑：`app/api/weather/route.ts` 里虽然写了 `export const revalidate = 600`，但 `lib/weather-source.ts` 的 `fetch` 带了 `cache: "no-store"` —— **fetch 级的 `no-store` 会覆盖路由段的 `revalidate`**，所以那个 600 秒**实际没生效**（保留它是记录意图）。Next 16 里要让这个接口真缓存，得用 `'use cache'` + `cacheLife`，或把 `no-store` 换成 `next: { revalidate: 600 }`。
 4. **密钥不外泄**：本例 Open-Meteo 不需要 Key；若换成需要 Key 的 provider，Key 只存在于服务端环境变量，浏览器无感。
 5. **便于在服务端预取**：服务端渲染首屏时可以直接调用 source 层，不需要"服务端 fetch 自己的 HTTP 接口"这种绕路写法。
 
@@ -296,7 +296,9 @@ WeatherPayload.hourly ──► lib/charts.ts 生成 option（纯数据）
 ## 取舍（Trade-offs）
 
 **1. URL 存状态 vs. 组件 state**
-选 URL。代价是要处理 `useSearchParams` 的 Suspense 边界、以及参数解析/序列化的一点点代码；收益是链接可分享、刷新不丢、浏览器前进后退可用、服务端能直出。对"查天气"这种以"地点"为核心的应用，几乎没理由不这么做。
+选 URL。代价是多一层 `useSearchParams` 的 Suspense 边界、以及参数解析/序列化的一点点代码；收益是链接可分享、刷新不丢、浏览器前进后退可用、服务端能直出。对"查天气"这种以"地点"为核心的应用，几乎没理由不这么做。
+
+> 补一句实测：这层边界其实**不是必需**的。本路由开头就 `await searchParams`，已经是 ƒ 动态渲染，**把它拆掉构建照样通过**；又因为没有开 `suspense` 模式，fallback 实际不会露面。保留它是遵循官方规矩 + 防御性 —— 路由哪天退回静态，这层能兜住 missing-suspense 报错。
 
 **2. TanStack Query vs. 手写 useEffect + useState**
 手写版本大概 60 行，但要自己处理：竞态（快速连点两个城市）、缓存、重试、组件卸载后的 setState、重复请求去重。这些正是 Query 的默认能力。代价是引入一个依赖和一点心智负担。
@@ -413,6 +415,6 @@ const isSearching  = keyword.length >= 2 && (isFetching || isDebouncing);
 ## 可能的下一步
 
 1. `lib/` 纯函数的单元测试（Vitest）：解析、URL 序列化、错误归一化。
-2. 服务端缓存：按坐标 + 小时粒度缓存上游响应，降低限额压力（`revalidate` 或 Redis）。
+2. 服务端缓存：按坐标 + 小时粒度缓存上游响应，降低限额压力（Next 16 用 `'use cache'` + `cacheLife`，或 Redis；动手前要先把 `weather-source.ts` 里的 `cache:"no-store"` 去掉，否则路由段的 `revalidate` 不起作用 —— 见「架构」第 3 条）。
 3. 无 JS 降级：当前选中地点后是客户端请求；可以让首屏完全由服务端渲染（已预取，差的是后续切换也可走 Server Action / RSC 导航）。
 4. 可访问性增强：搜索框目前是简化版 combobox，完整实现需要键盘上下键选择与 `aria-activedescendant`。
